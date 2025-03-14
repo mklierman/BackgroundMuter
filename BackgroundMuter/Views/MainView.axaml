@@ -19,8 +19,16 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <StackPanel Orientation="Vertical">
-        <ListBox HorizontalAlignment="Center" ItemsSource="{Binding Processes}">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="auto" />
+        </Grid.RowDefinitions>
+        <ListBox
+            Grid.Row="0"
+            HorizontalAlignment="Center"
+            ItemsSource="{Binding Processes}"
+            SelectionMode="Toggle">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal">
@@ -39,9 +47,12 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+        <StackPanel
+            Grid.Row="1"
+            HorizontalAlignment="Center"
+            Orientation="Horizontal">
             <Button Command="{Binding RefreshListCommand}" Content="Refresh List" />
             <Button Command="{Binding UnMuteAllCommand}" Content="Un-Mute All" />
         </StackPanel>
-    </StackPanel>
+    </Grid>
 </UserControl>
