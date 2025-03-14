@@ -66,11 +66,13 @@ public class MainViewModel : ViewModelBase
         eventDelegate = new WinEventDelegate(FocusChanged);
         IntPtr focusChangedHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, eventDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
         PopulateProcessList();
-        App app = Avalonia.Application.Current as App;
-        if (app != null)
+        if (Avalonia.Application.Current is App app)
+        {
             app.ShutdownRequested += This_ShutdownRequested;
+        }
     }
 
+    // Remove mutes from everything when shutting down the application
     private void This_ShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
         foreach (var process in Processes)
@@ -82,6 +84,7 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    // Called when the Checked status changes on the process in the collection
     public void PerformCheckedChanged(RoutedEventArgs e)
     {
         foreach (var process in Processes)
@@ -97,6 +100,7 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    // Unmutes all processes in the Processes collection.
     public void PerformUnMuteAll()
     {
         foreach (var process in Processes)
@@ -110,6 +114,7 @@ public class MainViewModel : ViewModelBase
         PopulateProcessList();
     }
 
+    // Method called when the current window focus has been changed
     public void FocusChanged(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
     {
         foreach (var process in Processes)
@@ -138,17 +143,9 @@ public class MainViewModel : ViewModelBase
         } 
     }
 
-    public static Process FindProcess(IntPtr handle) => FindProcess(p => p.Handle == handle);
-    public static Process FindProcess(int id) => FindProcess(p => p.Id == id);
-    public static Process FindProcess(string title) => FindProcess(p => p.MainWindowTitle == title);
-    public static Process FindProcess(Func<Process, bool> comparer)
-    {
-        foreach (Process p in Process.GetProcesses())
-            if (comparer(p))
-                return p;
-        return null;
-    }
-
+    /// <summary>
+    /// Populate the Processess collection with open windows.
+    /// </summary>
     private void PopulateProcessList()
     {
         List<ProcessItemModel> watchedItems = new();
@@ -192,12 +189,7 @@ public class MainViewModel : ViewModelBase
                 {
                     NewProcessList.Add(processItem);
                 }
-                else
-                {
-                    Debug.WriteLine(processItem.DisplayName);
-                }
             }
-
         }
 
         var SortedProcessList = NewProcessList.OrderBy(x => x.DisplayName?.ToString());
@@ -208,6 +200,12 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Set the mute status for the given process
+    /// and all processes with the same name.
+    /// </summary>
+    /// <param name="process"></param>
+    /// <param name="mute"></param>
     private void SetMuteForProcesses(Process process, bool mute)
     {
         var processName = process.ProcessName;
