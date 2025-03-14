@@ -1,11 +1,7 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
+﻿using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using BackgroundMuter.Helpers;
 using BackgroundMuter.Models;
-using DynamicData.Binding;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;
@@ -14,17 +10,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
-using System.Xml.Linq;
-using static System.Net.Mime.MediaTypeNames;
 using HWND = System.IntPtr;
 
 namespace BackgroundMuter.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    WinEventDelegate eventDelegate = null;
+    WinEventDelegate eventDelegate;
     delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
 
     [DllImport("user32.dll")]
@@ -33,27 +26,6 @@ public class MainViewModel : ViewModelBase
     private const uint WINEVENT_OUTOFCONTEXT = 0;
     private const uint EVENT_SYSTEM_FOREGROUND = 3;
     private delegate bool EnumWindowsProc(HWND hWnd, int lParam);
-
-    [DllImport("kernel32.dll")]
-    static extern int GetProcessId(IntPtr handle);
-
-    [DllImport("USER32.DLL")]
-    private static extern bool EnumWindows(EnumWindowsProc enumFunc, int lParam);
-
-    [DllImport("USER32.DLL")]
-    private static extern int GetWindowText(HWND hWnd, StringBuilder lpString, int nMaxCount);
-
-    [DllImport("USER32.DLL")]
-    private static extern int GetWindowTextLength(HWND hWnd);
-
-    [DllImport("USER32.DLL")]
-    private static extern bool IsWindowVisible(HWND hWnd);
-
-    [DllImport("USER32.DLL")]
-    private static extern IntPtr GetShellWindow();
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    static extern IntPtr GetForegroundWindow();
 
     public ReactiveCommand<Unit, Unit> UnMuteAllCommand { get; }
     public ReactiveCommand<Unit, Unit> RefreshListCommand { get; }
