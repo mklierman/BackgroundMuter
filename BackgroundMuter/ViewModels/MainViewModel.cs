@@ -30,7 +30,6 @@ public class MainViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> UnMuteAllCommand { get; }
     public ReactiveCommand<Unit, Unit> RefreshListCommand { get; }
 
-
     public MainViewModel()
     {
         UnMuteAllCommand = ReactiveCommand.Create(PerformUnMuteAll);
@@ -115,6 +114,9 @@ public class MainViewModel : ViewModelBase
         } 
     }
 
+    // Some processes that can be safely excluded every time
+    private List<string> ExcludedProcesses = ["SystemSettings", "TextInputHost"];
+
     /// <summary>
     /// Populate the Processess collection with open windows.
     /// </summary>
@@ -134,32 +136,42 @@ public class MainViewModel : ViewModelBase
 
         foreach (var process in processList)
         {
-            ProcessItemModel processItem = new();
-            if (!string.IsNullOrEmpty(process.MainWindowTitle) && process.MainWindowTitle.Length > 0)
+            if (!ExcludedProcesses.Contains(process.ProcessName))
             {
-                processItem.Process = process;
-                processItem.ProcessName = process.ProcessName;
-                processItem.ProcessHandle = process.MainWindowHandle;
-                
-                if (string.IsNullOrEmpty(process.MainWindowTitle))
+                ProcessItemModel processItem = new();
+                if (!string.IsNullOrEmpty(process.MainWindowTitle) && process.MainWindowTitle.Length > 0)
                 {
-                    processItem.DisplayName = process.ProcessName;
-                }
-                else
-                {
-                    processItem.ProcessWindowTitle = process.MainWindowTitle;
-                    processItem.DisplayName = process.ProcessName + " | " + process.MainWindowTitle;
-                }
+                    processItem.Process = process;
+                    processItem.ProcessName = process.ProcessName;
+                    processItem.ProcessHandle = process.MainWindowHandle;
 
-                var match = Processes.FirstOrDefault(x => x.ProcessHandle == process.MainWindowHandle);
-                if (match != null && match.IsBeingWatched)
-                {
-                    processItem.IsBeingWatched = true;
-                }
+                    if (string.IsNullOrEmpty(process.MainWindowTitle))
+                    {
+                        processItem.DisplayName = process.ProcessName;
+                    }
+                    else
+                    {
+                        processItem.ProcessWindowTitle = process.MainWindowTitle;
+                        if (process.ProcessName == process.MainWindowTitle)
+                        {
+                            processItem.DisplayName = process.ProcessName;
+                        }
+                        else
+                        {
+                            processItem.DisplayName = $"{process.MainWindowTitle} ({process.ProcessName})";
+                        }
+                    }
 
-                if (!NewProcessList.Any((ProcessItemModel item) => item.ProcessHandle.Equals(processItem.ProcessHandle)))
-                {
-                    NewProcessList.Add(processItem);
+                    var match = Processes.FirstOrDefault(x => x.ProcessHandle == process.MainWindowHandle);
+                    if (match != null && match.IsBeingWatched)
+                    {
+                        processItem.IsBeingWatched = true;
+                    }
+
+                    if (!NewProcessList.Any((ProcessItemModel item) => item.ProcessHandle.Equals(processItem.ProcessHandle)))
+                    {
+                        NewProcessList.Add(processItem);
+                    }
                 }
             }
         }
