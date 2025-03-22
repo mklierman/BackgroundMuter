@@ -19,40 +19,144 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <Grid Margin="10">
+    <UserControl.Styles>
+        <Style Selector="Button">
+            <Setter Property="Padding" Value="24,12"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="MinWidth" Value="160"/>
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderBrush" Value="#3D3D3D"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background" Value="#3D3D3D"/>
+            <Setter Property="BorderBrush" Value="#4D4D4D"/>
+        </Style>
+        <Style Selector="Button:pressed">
+            <Setter Property="Background" Value="#1E1E1E"/>
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="BorderBrush" Value="#3D3D3D"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="BorderBrush" Value="#3D3D3D"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="BorderBrush" Value="#4D4D4D"/>
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Background="#1E1E1E">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="auto" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <ListBox
-            Grid.Row="0"
-            HorizontalAlignment="Center"
-            ItemsSource="{Binding Processes}"
-            SelectionMode="Toggle">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
-                        <CheckBox x:Name="checkbox" IsChecked="{Binding IsBeingWatched, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                            <i:Interaction.Behaviors>
-                                <ia:EventTriggerBehavior EventName="Click" SourceObject="{Binding #checkbox}">
-                                    <ia:InvokeCommandAction Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PerformCheckedChanged}" />
-                                </ia:EventTriggerBehavior>
-                            </i:Interaction.Behaviors>
-                        </CheckBox>
-                        <TextBlock
-                            VerticalAlignment="Center"
-                            Text="{Binding DisplayName, Mode=TwoWay}"
-                            TextAlignment="Center" />
+
+        <!-- Header -->
+        <Border 
+            Grid.Row="0" 
+            Background="#2D2D2D" 
+            Padding="20,16"
+            CornerRadius="0,0,8,8">
+            <TextBlock
+                Text="Background Process Muter"
+                FontSize="20"
+                FontWeight="SemiBold"
+                Foreground="#FFFFFF"
+                HorizontalAlignment="Center"/>
+        </Border>
+
+        <!-- Process List -->
+        <Border 
+            Grid.Row="1" 
+            Margin="20,16"
+            Background="#2D2D2D"
+            CornerRadius="8">
+            <ListBox
+                ItemsSource="{Binding Processes}"
+                SelectionMode="Toggle"
+                Margin="4">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <CheckBox 
+                                Grid.Column="0"
+                                x:Name="checkbox" 
+                                IsChecked="{Binding IsBeingWatched, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Margin="0,0,12,0">
+                                <i:Interaction.Behaviors>
+                                    <ia:EventTriggerBehavior EventName="Click" SourceObject="{Binding #checkbox}">
+                                        <ia:InvokeCommandAction Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PerformCheckedChanged}" />
+                                    </ia:EventTriggerBehavior>
+                                </i:Interaction.Behaviors>
+                            </CheckBox>
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="{Binding DisplayName, Mode=TwoWay}"
+                                TextAlignment="Left"
+                                VerticalAlignment="Center"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <!-- Buttons -->
+        <Border 
+            Grid.Row="2" 
+            Background="#2D2D2D" 
+            Padding="20,16"
+            CornerRadius="8,8,0,0">
+            <StackPanel
+                HorizontalAlignment="Center"
+                Orientation="Horizontal"
+                Spacing="12">
+                <Button 
+                    Command="{Binding RefreshListCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock 
+                            Text="&#xE72C;"
+                            FontFamily="Segoe Fluent Icons"
+                            FontSize="16"/>
+                        <TextBlock Text="Refresh List"/>
                     </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-        <StackPanel
-            Grid.Row="1"
-            HorizontalAlignment="Center"
-            Orientation="Horizontal">
-            <Button Command="{Binding RefreshListCommand}" Content="Refresh List" />
-            <Button Command="{Binding UnMuteAllCommand}" Content="Un-Mute All" />
-        </StackPanel>
+                </Button>
+                <Button 
+                    Command="{Binding UnMuteAllCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock 
+                            Text="&#xE767;"
+                            FontFamily="Segoe Fluent Icons"
+                            FontSize="16"/>
+                        <TextBlock Text="Un-Mute All"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>
