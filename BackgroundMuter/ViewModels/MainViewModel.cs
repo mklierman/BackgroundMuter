@@ -15,35 +15,94 @@ using HWND = System.IntPtr;
 
 namespace BackgroundMuter.ViewModels;
 
+/// <summary>
+/// Main view model for the Background Muter application.
+/// Handles process monitoring, audio muting, and UI state management.
+/// </summary>
 public class MainViewModel : ViewModelBase
 {
-    WinEventDelegate eventDelegate;
-    delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+    #region Win32 API Imports and Constants
+    /// <summary>
+    /// Delegate for handling Windows event callbacks.
+    /// Used to monitor window focus changes.
+    /// </summary>
+    private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+    
+    /// <summary>
+    /// Delegate for Windows enumeration callbacks.
+    /// </summary>
+    private delegate bool EnumWindowsProc(HWND hWnd, int lParam);
 
+    /// <summary>
+    /// Sets up a Windows event hook to monitor system events.
+    /// </summary>
     [DllImport("user32.dll")]
-    static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+    private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
 
     private const uint WINEVENT_OUTOFCONTEXT = 0;
     private const uint EVENT_SYSTEM_FOREGROUND = 3;
-    private delegate bool EnumWindowsProc(HWND hWnd, int lParam);
+    #endregion
 
+    #region Properties
+    /// <summary>
+    /// Collection of processes that can be monitored and muted.
+    /// </summary>
+    private ObservableCollection<ProcessItemModel> processes = [];
+    public ObservableCollection<ProcessItemModel> Processes
+    { 
+        get => processes; 
+        set => processes = value;
+    }
+
+    /// <summary>
+    /// Command to unmute all currently muted processes.
+    /// </summary>
     public ReactiveCommand<Unit, Unit> UnMuteAllCommand { get; }
-    public ReactiveCommand<Unit, Unit> RefreshListCommand { get; }
 
+    /// <summary>
+    /// Command to refresh the list of available processes.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> RefreshListCommand { get; }
+    #endregion
+
+    #region Private Fields
+    /// <summary>
+    /// Delegate instance for handling window focus changes.
+    /// </summary>
+    private readonly WinEventDelegate eventDelegate;
+
+    /// <summary>
+    /// List of system processes that should be excluded from monitoring.
+    /// </summary>
+    private readonly List<string> ExcludedProcesses = ["SystemSettings", "TextInputHost"];
+    #endregion
+
+    #region Constructor
+    /// <summary>
+    /// Initializes a new instance of the MainViewModel.
+    /// Sets up event hooks, commands, and initial process list.
+    /// </summary>
     public MainViewModel()
     {
         UnMuteAllCommand = ReactiveCommand.Create(PerformUnMuteAll);
         RefreshListCommand = ReactiveCommand.Create(PerformRefreshList);
+        
         eventDelegate = new WinEventDelegate(FocusChanged);
         IntPtr focusChangedHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, eventDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
+        
         PopulateProcessList();
+        
         if (Avalonia.Application.Current is App app)
         {
             app.ShutdownRequested += This_ShutdownRequested;
         }
     }
+    #endregion
 
-    // Remove mutes from everything when shutting down the application
+    #region Event Handlers
+    /// <summary>
+    /// Handles application shutdown by unmuting all processes.
+    /// </summary>
     private void This_ShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
         foreach (var process in Processes)
@@ -55,7 +114,10 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    // Called when the Checked status changes on the process in the collection
+    /// <summary>
+    /// Handles checkbox state changes for process monitoring.
+    /// Updates mute status for all processes based on their checked state.
+    /// </summary>
     public void PerformCheckedChanged(RoutedEventArgs e)
     {
         foreach (var process in Processes)
@@ -71,21 +133,10 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    // Unmutes all processes in the Processes collection.
-    public void PerformUnMuteAll()
-    {
-        foreach (var process in Processes)
-        {
-            SetMuteForProcesses(process.Process, false);
-        }
-    }
-
-    private void PerformRefreshList()
-    {
-        PopulateProcessList();
-    }
-
-    // Method called when the current window focus has been changed
+    /// <summary>
+    /// Handles window focus changes.
+    /// Mutes/unmutes processes based on whether they have focus.
+    /// </summary>
     public void FocusChanged(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
     {
         foreach (var process in Processes)
@@ -103,25 +154,38 @@ public class MainViewModel : ViewModelBase
             }
         }
     }
+    #endregion
 
-    private ObservableCollection<ProcessItemModel> processes = [];
-    public ObservableCollection<ProcessItemModel> Processes
-    { 
-        get => processes; 
-        set 
+    #region Command Handlers
+    /// <summary>
+    /// Unmutes all processes and unchecks all checkboxes.
+    /// </summary>
+    public void PerformUnMuteAll()
+    {
+        foreach (var process in Processes)
         {
-            processes = value;
-        } 
+            process.IsBeingWatched = false;
+            SetMuteForProcesses(process.Process, false);
+        }
     }
 
-    // Some processes that can be safely excluded every time
-    private List<string> ExcludedProcesses = ["SystemSettings", "TextInputHost"];
-
     /// <summary>
-    /// Populate the Processess collection with open windows.
+    /// Refreshes the list of available processes.
+    /// </summary>
+    private void PerformRefreshList()
+    {
+        PopulateProcessList();
+    }
+    #endregion
+
+    #region Process Management
+    /// <summary>
+    /// Populates the process list with all available windows.
+    /// Preserves the watched state of existing processes.
     /// </summary>
     private void PopulateProcessList()
     {
+        // Preserve watched items
         List<ProcessItemModel> watchedItems = new();
         foreach (var process in Processes)
         {
@@ -185,11 +249,10 @@ public class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Set the mute status for the given process
-    /// and all processes with the same name.
+    /// Sets the mute status for a process and all processes with the same name.
     /// </summary>
-    /// <param name="process"></param>
-    /// <param name="mute"></param>
+    /// <param name="process">The process to mute/unmute</param>
+    /// <param name="mute">True to mute, false to unmute</param>
     private void SetMuteForProcesses(Process process, bool mute)
     {
         var processName = process.ProcessName;
@@ -199,4 +262,5 @@ public class MainViewModel : ViewModelBase
             Task.Run(() => AudioHelper.SetMute(proc, mute));
         }
     }
+    #endregion
 }
